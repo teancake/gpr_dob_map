@@ -7,8 +7,10 @@ X. Yang, B. Peng, H. Zhou, and L. Yang, [State Estimation for Nonlinear Dynamic 
 ## Directory Structure
 * GPR_DOB contains the code for gaussian process regression model with derivative observations. This is an exact replicate of the repository [gpr_dob](https://github.com/teancake/gpr_dob) with an appended 'sq_dist.c' and its compiled binary files to improve the execution speed of the original mfile 'sq_dist.m'
 * GPR_DOB_MAP contains the main code for this repository, i.e. the MAP estimator using GPR model and derivative observations.
+
 ## Aircraft Angle of Attack Estimation Examples
 There are two examples in this repository, both runs in MATLAB and estimates the angle of attack of an aircraft using measurements of other longitudinal vairables. This is a case study investigate in my CGNCC 2016 paper. The first example uses offline data collected from the aircraft simulation model, thus can be executed without Simulink. The other one uses Simulink and provices a more complete simulation environment.
+
 ### Example using offline data without Simulink 
 This example includes a single m-file 'example_gpr_dob_map.m' and three data files: 'example_offline_data.mat' for the offline aircraft input output data,  	'example_GTM_IODATA.mat' and 'example_GTM_LINEAR_LON.mat' for the aircraft linearisation data used in MAP design. 
 
