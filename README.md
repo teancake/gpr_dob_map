@@ -17,10 +17,12 @@ This example includes a single m-file 'example_gpr_dob_map.m' and three data fil
 To run this example, simply run 'example_gpr_dob_map.m' in MATLAB.
 
 ### Example using Simulink
-This example is a bit complicated. The two data files 'example_GTM_IODATA.mat' and 'example_GTM_LINEAR_LON.mat' used in MAP design are also used in this example. Apart from this, a simulink model 'example_cgncc16_paper_gtm.slx' is also included. Note that this model should be used in combination with the GTM simulation model. Befor running this example, the GTM Simulation model at https://github.com/nasa/GTM_DesignSim should be downloaded, a new Simulink model with the name of 'gtm_design_map.slx' should be created afterwards by cobmining the blocks in 'example_cgncc16_paper_gtm.slx' and 'gtm_sim.slx' in the GTM_DesignSim programs. The following figure shows how the two should be combined.
+This example is a bit complicated. The two data files 'example_GTM_IODATA.mat' and 'example_GTM_LINEAR_LON.mat' used in MAP design are also used in this example. Apart from this, a simulink model 'example_cgncc16_paper_gtm.slx' is also included. Note that this model should be used in combination with the GTM simulation model. Befor running this example:
+* Download the [GTM Simulation model] (https://github.com/nasa/GTM_DesignSim "GTM_DesignSim")
+* Create a new Simulink model with the name of 'gtm_design_map.slx'
+* Copy and paste the blocks in 'example_cgncc16_paper_gtm.slx' and 'GTM_DesignSim/gtm_design/gtm_design.slx' to the created Simulink model. The figure below shows how the two should be combined.
+* Run 'example_cgncc16_paper.m' in MATLAB. 
+
+Note: this example also uses an m-file 'ekfd.m', which implements an extended Kalman filter, the only reason for this is to re-use existing code, users can implement their own Kalman filter without bothering with the EKF.
 
 <img src="https://github.com/teancake/gpr_dob_map/blob/master/example_cgncc16_paper_simulink_blocks.png" alt="simulink"> 
-
-After this, run 'example_cgncc16_paper.m' in MATLAB. 
-
-This example also uses an m-file 'ekfd.m', which implements an extended Kalman filter, the only reason for this is to re-use existing code, users can implement their own Kalman filter without bothering with the EKF.
