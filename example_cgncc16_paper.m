@@ -3,30 +3,41 @@
 % systes using Gaussian process regression models and derivative
 % observations (a.k.a, local linear models). 
 %
-% The test scenario in this file is the estimation of aircraft angle of
-% atack from measurement of other longitudinal variables. The scenario is
-% the same as the study case of the reference below, apart from this 
-% example runs on offline data collected from the GTM simulation model. 
-% For detailed information, please refer to the following reference.
+% This example provides the full simulation scenario in the the following 
+% reference, and should run together with the GTM simulation model at
+% https://github.com/nasa/GTM_DesignSim
 %
 % Xiaoke Yang, Bo Peng, Hang Zhou and Lingyu Yang, "State estimation for 
 % nonlinear dynamic systems using Gaussian processes and pre-computed 
 % local linear models," 2016 IEEE Chinese Guidance, Navigation and Control 
 % Conference (CGNCC), Nanjing, 2016, pp. 1963-1968.
 % 
-% This program runs in MATLAB since it utilises the fmincon optimisation
-% function in MATLAB. The program may be modified to run in Octave if other
-% optimisation procedure is used. Since the nonlinear optimisation in this
-% program is time consuming, the execution of this example may take a few
-% minutes. By compiling GPR_DOB/sq_dist.c, the execution time may be
-% reduced to less than a half.
+% Since the nonlinear optimisation in this program is time consuming, 
+% the execution of this example may take a few minutes. By compiling 
+% GPR_DOB/sq_dist.c, the execution time may be reduced to less than a half.
+%
+% This example also uses an m-file ekfd.m, which implements an extended
+% Kalman filter, the only reason for this is to re-use existing code, users
+% can implement their own Kalman filter without bothering with the EKF.
+%
+% Befor running this example, the GTM Simulation model at 
+% https://github.com/nasa/GTM_DesignSim should be downloaded, a new
+% Simulink model with the name of 'gtm_design_map.slx' should be created
+% by cobmining the blocks in 'example_cgncc16_paper_gtm.slx' and 
+% 'gtm_sim.slx' in the GTM_DesignSim programs. 
 %
 % Xiaoke Yang <das.xiaoke@hotmail.com>
-% Last modified: Tue 21 Feb 19:16:35 CST 2017
+% Last modified: Thu 23 Feb 11:18:51 CST 2017
 %
 %% PATH CONFIG
 addpath('GPR_DOB_MAP')          % include the MAP code
 addpath('GPR_DOB')              % include the GPR_DOB code
+% GTM Paths
+addpath(genpath('./config/'));  % Add mat file directory
+addpath('./mfiles');            % Add mfiles directories.
+addpath('./obj');               % Add compilex code directory
+addpath('./libs');              % Add libriary directory
+rehash path
 %% CLEAR ALL WORKSPACE VARIABLES THEN RELOAD DATA
 clear all
 load example_offline_data	% load offline simulation data
@@ -139,69 +150,37 @@ sys.u0 = sys.u0(input_idx);
 kf.P0 = eye(size(sys.A));
 kf.Q = eye(size(sys.A))*0.1;
 kf.R = diag([100 10 1]);
-% Kalman gain
-[~, ~, kf.L] = dare(sys.A',sys.C',kf.Q,kf.R);
+
 
 
 %%  SIMULATION
 sys_xm_e_kf_delta = zeros(size(sys.x0));    % initial state estimate - KF
 sys_xm_e_gp = zeros(Nx,1);                  % initial state estimate - GP
-sys_xm_e_kf_v = [];
-sys_xm_e_gp_v = [];
 G_pre = diag([1/0.592484 1 1]);         % the unit conversion is due to
 G_post = diag([0.592484 180/pi 1 1]);   % different units used in the 
-figure(1)                               % linearisation of the system
-clf
-for i=1:numel(data_t)
-    if NOISE_ENABLE
-        sys_y_n = data_x(i,output_idx)' + diag([1 0.032 0.032])*randn(3,1);
-    else
-        sys_y_n = data_x(i,output_idx)';
-    end
-        
-    sys_y = G_pre*sys_y_n;        % unit conversion
-    % There is one-step delay on the u both for the KF and GPR-DOB-MAP
-    if i == 1
-        sys_u = zeros(1,Nu);
-        sys_u_delta = zeros(1,Nu);
-    else
-        sys_u = data_u(i-1,:);
-        sys_u_delta = sys_u - sys.u0;           % Kalman filter uses  
-    end                                         % perturbed input and state 
-    sys_y_delta = sys_y - sys.x0(output_idx);   % w.r.t. the equilibrium.
-    sys_xm_e_kf_delta = sys.A*sys_xm_e_kf_delta + sys.B*sys_u_delta ...
-        + kf.L'*(sys_y_delta - sys.C*sys_xm_e_kf_delta);  % Kalman filter
-    sys_xm_e_kf = sys_xm_e_kf_delta + sys.x0;   % append the equil. state
-    sys_xm_e_gp = gpr_dob_map(sys_y, sys_u, sys_xm_e_gp);    % GPR-DOB-MAP
-    sys_xm_e_kf_v = [sys_xm_e_kf_v; (G_post*sys_xm_e_kf)']; % save results
-    sys_xm_e_gp_v = [sys_xm_e_gp_v; (G_post*sys_xm_e_gp)']; % and unit conv
-    % dynamic plotting
-    subplot(4,1,1)
-    title(sprintf('t=%f s, finished %2.2f%%',data_t(i), ...
-                                    data_t(i)/data_t(end)*100));
-    plot(data_t(1:i),data_x(1:i,1),'g-', data_t(1:i), ...
-        sys_xm_e_kf_v(:,1),'r-.', data_t(1:i),sys_xm_e_gp_v(:,1),'b--')
-    legend('True value','Kalman filter','GPR-DOB-MAP')
-    ylabel('V_{TAS}[knots]')
-    xlim([0 data_t(end)])
-    subplot(4,1,2)
-    plot(data_t(1:i),data_x(1:i,2),'g-',data_t(1:i), ...
-        sys_xm_e_kf_v(:,2),'r-.', data_t(1:i),sys_xm_e_gp_v(:,2),'b--')
-    legend('True value','Kalman filter','GPR-DOB-MAP')
-    ylabel('AoA[deg]')
-    xlim([0 data_t(end)])
-    subplot(4,1,3)
-    plot(data_t(1:i),data_x(1:i,3),'g-',data_t(1:i), ...
-        sys_xm_e_kf_v(:,3),'r-.', data_t(1:i),sys_xm_e_gp_v(:,3),'b--')
-    legend('True value','Kalman filter','GPR-DOB-MAP')
-    ylabel('q[rad/s]')
-    xlim([0 data_t(end)])
-    subplot(4,1,4)
-    plot(data_t(1:i),data_x(1:i,4),'g-',data_t(1:i), ...
-        sys_xm_e_kf_v(:,4),'r-.', data_t(1:i),sys_xm_e_gp_v(:,4),'b--')
-    legend('True value','Kalman filter','GPR-DOB-MAP')
-    ylabel('\theta[rad]')
-    xlim([0 data_t(end)])
-    drawnow
-end
+                                        % linearisation of the system
 
+%% start simulation
+open_system('gtm_design');
+% load nominal starting point
+loadmws(init_design('GTM'),'gtm_design');
+% Trim model, and load trimmed conditions
+SimVars = trimgtm(struct('eas',75, 'gamma',0));
+
+hWS = get_param('gtm_design', 'ModelWorkspace');
+hWS.reload;
+close_system('gtm_design');
+
+open_system('gtm_design_map')
+% Load Simulation Variables (at trim condition) into Model Workspace
+loadmws(SimVars);
+
+% Construct same doublet sequence via simulink
+set_param('gtm_design_map/Input Generator/Doublet Generator', ...
+                                        	'timeon','[0.5 12 7]');
+set_param('gtm_design_map/Input Generator/Doublet Generator', ...
+                                            'pulsewidth','[0.5 2 2]');
+set_param('gtm_design_map/Input Generator/Doublet Generator', ...
+                                            'amplitude','[5 0 0]');
+% start simulation
+set_param('gtm_design_map', 'SimulationCommand', 'start')
